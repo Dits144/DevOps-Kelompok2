@@ -1,0 +1,95 @@
+---
+- name: Hapus Docker dan containerd lama
+  apt:
+    name:
+      - docker
+      - docker-engine
+      - docker.io
+      - containerd
+      - runc
+    state: absent
+  become: yes
+  ignore_errors: yes
+
+- name: Install dependensi sistem untuk Docker dan Git
+  apt:
+    name:
+      - apt-transport-https
+      - ca-certificates
+      - curl
+      - gnupg
+      - lsb-release
+      - git
+    state: present
+    update_cache: yes
+  become: yes
+
+- name: Tambahkan GPG key dan repository Docker
+  block:
+    - name: Tambahkan Docker GPG key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Tambahkan Docker repository
+      apt_repository:
+        repo: "deb [arch=amd64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+        state: present
+  become: yes
+
+- name: Install Docker Engine versi terbaru dan Compose plugin
+  apt:
+    name:
+      - docker-ce
+      - docker-ce-cli
+      - containerd.io
+      - docker-compose-plugin
+    state: latest
+    update_cache: yes
+  become: yes
+
+- name: Tambahkan user ke grup docker
+  user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes
+  become: yes
+
+- name: Pastikan Docker service aktif
+  service:
+    name: docker
+    state: started
+    enabled: yes
+  become: yes
+
+- name: Buat direktori untuk volume Jenkins
+  file:
+    path: /opt/jenkins_home
+    state: directory
+    owner: 1000
+    group: 1000
+    mode: '0755'
+  become: yes
+
+- name: Jalankan Jenkins container dengan versi terbaru
+  community.docker.docker_container:
+    name: jenkins
+    image: jenkins/jenkins:latest
+    user: root
+    ports:
+      - "8081:8080"
+      - "50000:50000"
+    volumes:
+      - /opt/jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    restart_policy: always
+    state: started
+  become: yes
+
+- name: Setup Docker CLI dalam Jenkins container
+  shell: |
+    docker exec jenkins bash -c "\
+      apt-get update && \
+      apt-get install -y curl && \
+      curl -fsSL https://get.docker.com | sh"
+  become: yes

@@ -1,0 +1,46 @@
+services:
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+      - node_exporter
+      - cadvisor
+      - mysqld_exporter
+
+  node_exporter:
+    image: prom/node-exporter:latest
+    ports:
+      - "9100:9100"
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    ports:
+      - "8082:8080"
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+
+  mysqld_exporter:
+    image: prom/mysqld-exporter:latest
+    ports:
+      - "9104:9104"
+    command:
+      - --config.my-cnf=/etc/mysql/my.cnf
+      - --mysqld.address=192.168.1.73:3306
+    volumes:
+      - ./my.cnf:/etc/mysql/my.cnf:ro
+
+volumes:
+  grafana-storage:
