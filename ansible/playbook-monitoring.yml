@@ -1,9 +1,0 @@
----
-- name: Provision Monitoring Stack untuk Aplikasi Lacomart
-  hosts: managed-nodes
-  become: true
-  roles:
-    - monitoring
-
-  collections:
-    - community.docker
