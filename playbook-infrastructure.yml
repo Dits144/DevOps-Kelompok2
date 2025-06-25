@@ -1,0 +1,9 @@
+---
+- name: Provision Infrastruktur Dasar dan Jenkins
+  hosts: managed_node
+  become: true
+  roles:
+    - infrastructure
+
+  collections:
+    - community.docker
