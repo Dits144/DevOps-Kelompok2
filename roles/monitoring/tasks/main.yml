@@ -1,0 +1,43 @@
+- name: Pastikan Docker Compose terinstall
+  apt:
+    name: docker-compose
+    state: present
+    update_cache: yes
+
+- name: Cek apakah direktori /opt/monitoring ada
+  stat:
+    path: /opt/monitoring
+  register: monitoring_dir
+
+- name: Bersihkan container dan image sebelumnya
+  community.docker.docker_compose_v2:
+    project_src: /opt/monitoring
+    state: absent
+  when: monitoring_dir.stat.exists and monitoring_dir.stat.isdir
+
+- name: Buat direktori untuk monitoring
+  file:
+    path: /opt/monitoring
+    state: directory
+    mode: '0755'
+
+- name: Salin file docker-compose monitoring
+  copy:
+    src: docker-compose-monitoring.yml
+    dest: /opt/monitoring/docker-compose.yml
+
+- name: Salin file konfigurasi Prometheus
+  copy:
+    src: prometheus.yml
+    dest: /opt/monitoring/prometheus.yml
+
+- name: Salin file konfigurasi kredensial MySQL untuk exporter
+  copy:
+    src: my.cnf
+    dest: /opt/monitoring/my.cnf
+    mode: '0600'
+
+- name: Jalankan monitoring stack dengan Docker Compose V2
+  community.docker.docker_compose_v2:
+    project_src: /opt/monitoring
+    state: present
